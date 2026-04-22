@@ -6,6 +6,41 @@ Targets the **Upper Tribunal (Tax and Chancery Chamber)** and **First-tier Tribu
 
 ## Installation
 
+### RHEL 8
+
+RHEL 8 ships with Python 3.6. Install Python 3.12 via pyenv first:
+
+```bash
+# Install build dependencies
+sudo dnf install -y gcc zlib-devel bzip2 bzip2-devel readline-devel \
+    sqlite sqlite-devel openssl-devel tk-devel libffi-devel xz-devel git
+
+# Install pyenv
+curl https://pyenv.run | bash
+
+# Add pyenv to your shell
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+source ~/.bashrc
+
+# Install Python 3.12
+pyenv install 3.12
+```
+
+Then clone and install:
+
+```bash
+git clone https://github.com/pw9876/caselaw-downloader.git
+cd caselaw-downloader
+pyenv local 3.12
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+```
+
+### macOS / Linux (Python 3.12+ already installed)
+
 ```bash
 git clone https://github.com/pw9876/caselaw-downloader.git
 cd caselaw-downloader
