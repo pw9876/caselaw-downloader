@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    black:
+      glob: "*.py"
+      run: black --check {staged_files}
+    flake8:
+      glob: "*.py"
+      run: flake8 --max-line-length=99 {staged_files}
+    pytest:
+      run: python -B -m pytest -c pytest-precommit.ini -p no:cacheprovider
+    yaml-check:
+      glob: "*.{yml,yaml}"
+      run: python -c "import yaml, sys; [yaml.safe_load(open(f)) for f in sys.argv[1:]]" {staged_files}
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: python -m commitizen check --commit-msg-file {1}

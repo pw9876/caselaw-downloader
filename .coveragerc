@@ -1,0 +1,10 @@
+[run]
+source = src
+data_file = /tmp/.coverage_precommit
+omit =
+    */tests/*
+    */__init__.py
+
+[report]
+fail_under = 80
+show_missing = true
