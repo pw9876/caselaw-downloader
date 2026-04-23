@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -43,7 +42,7 @@ class TestCLI:
     def test_download_success(self, tmp_path):
         runner = CliRunner()
         with (
-            patch("caselaw_downloader.cli.CaselawClient") as MockClient,
+            patch("caselaw_downloader.cli.CaselawClient"),
             patch("caselaw_downloader.cli.download_all") as mock_dl,
         ):
             mock_dl.return_value = [tmp_path / "case.xml"]

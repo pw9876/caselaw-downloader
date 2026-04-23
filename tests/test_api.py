@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import requests
 
 from caselaw_downloader.api import (
-    API_BASE,
     CaselawClient,
     CaseSummary,
     _parse_entry,
@@ -18,6 +17,7 @@ from caselaw_downloader.api import (
 ATOM_NS = "http://www.w3.org/2005/Atom"
 TNA_NS = "http://www.legislation.gov.uk/namespaces/TNA"
 OS_NS = "http://a9.com/-/spec/opensearch/1.1/"
+_B = "https://caselaw.test"
 
 _SINGLE_ENTRY_XML = f"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="{ATOM_NS}"
@@ -30,9 +30,9 @@ _SINGLE_ENTRY_XML = f"""<?xml version="1.0" encoding="UTF-8"?>
     <updated>2024-03-02T00:00:00Z</updated>
     <tna:uri>ukftt/tc/2024/1</tna:uri>
     <tna:identifier type="ukncn">[2024] UKFTT 1 (TC)</tna:identifier>
-    <link rel="alternate" type="text/html" href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1"/>
-    <link rel="xml" type="application/xml" href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1/data.xml"/>
-    <link rel="pdf" type="application/pdf" href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1/data.pdf"/>
+    <link rel="alternate" href="{_B}/ukftt/tc/2024/1"/>
+    <link rel="alternate" type="application/akn+xml" href="{_B}/ukftt/tc/2024/1/data.xml"/>
+    <link rel="alternate" type="application/pdf" href="{_B}/ukftt/tc/2024/1/data.pdf"/>
   </entry>
 </feed>"""
 
@@ -132,17 +132,17 @@ class TestCaselawClient:
         assert list(client.iter_cases()) == []
 
     def test_iter_cases_paginates(self):
-        two_entries = _SINGLE_ENTRY_XML.replace(
-            "</feed>",
-            f"""  <entry>
+        entry2 = f"""  <entry>
     <title>Jones v HMRC</title>
     <published>2024-04-01T00:00:00Z</published>
     <updated>2024-04-01T00:00:00Z</updated>
-    <tna:uri>ukftt/tc/2024/2</tna:uri>
     <tna:identifier type="ukncn">[2024] UKFTT 2 (TC)</tna:identifier>
+    <link rel="alternate" href="{_B}/ukftt/tc/2024/2"/>
+    <link rel="alternate" type="application/akn+xml" href="{_B}/ukftt/tc/2024/2/data.xml"/>
+    <link rel="alternate" type="application/pdf" href="{_B}/ukftt/tc/2024/2/data.pdf"/>
   </entry>
-</feed>""",
-        )
+</feed>"""
+        two_entries = _SINGLE_ENTRY_XML.replace("</feed>", entry2)
         responses = [
             _mock_response(two_entries),
             _mock_response(_EMPTY_FEED_XML),

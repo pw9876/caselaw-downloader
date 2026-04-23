@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from caselaw_downloader.api import CaseSummary
 from caselaw_downloader.downloader import _safe_path, download_all, download_case
