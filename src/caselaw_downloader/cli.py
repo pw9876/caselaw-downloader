@@ -55,7 +55,9 @@ VALID_FORMATS = {"html", "xml", "pdf"}
     default=False,
     help="Print the total number of matching cases and exit.",
 )
-def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: int | None, count: bool) -> None:
+def main(
+    output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: int | None, count: bool
+) -> None:
     """Download case law from The National Archives Find Case Law service.
 
     By default downloads all Tax Chamber and Upper Tribunal Tax and Chancery
@@ -105,4 +107,6 @@ def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: 
         sys.exit(1)
 
     click.echo()
-    click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {output_path.resolve()}")
+    click.echo(
+        f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {output_path.resolve()}"
+    )

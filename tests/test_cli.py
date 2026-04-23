@@ -42,24 +42,30 @@ class TestCLI:
 
     def test_download_success(self, tmp_path):
         runner = CliRunner()
-        with patch("caselaw_downloader.cli.CaselawClient") as MockClient, \
-             patch("caselaw_downloader.cli.download_all") as mock_dl:
+        with (
+            patch("caselaw_downloader.cli.CaselawClient") as MockClient,
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
             mock_dl.return_value = [tmp_path / "case.xml"]
             result = runner.invoke(main, ["--output", str(tmp_path), "--limit", "1"])
         assert result.exit_code == 0
 
     def test_download_prints_summary(self, tmp_path):
         runner = CliRunner()
-        with patch("caselaw_downloader.cli.CaselawClient"), \
-             patch("caselaw_downloader.cli.download_all") as mock_dl:
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
             mock_dl.return_value = [tmp_path / "a.xml", tmp_path / "b.xml"]
             result = runner.invoke(main, ["--output", str(tmp_path)])
         assert "Done" in result.output
 
     def test_keyboard_interrupt_exits_cleanly(self, tmp_path):
         runner = CliRunner()
-        with patch("caselaw_downloader.cli.CaselawClient"), \
-             patch("caselaw_downloader.cli.download_all", side_effect=KeyboardInterrupt):
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", side_effect=KeyboardInterrupt),
+        ):
             result = runner.invoke(main, ["--output", str(tmp_path)])
         assert result.exit_code == 1
 
@@ -75,8 +81,10 @@ class TestCLI:
 
     def test_format_option(self, tmp_path):
         runner = CliRunner()
-        with patch("caselaw_downloader.cli.CaselawClient"), \
-             patch("caselaw_downloader.cli.download_all") as mock_dl:
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
             mock_dl.return_value = []
             runner.invoke(main, ["--output", str(tmp_path), "--format", "pdf"])
             _, kwargs = mock_dl.call_args

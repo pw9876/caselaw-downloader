@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Iterator
+from urllib.parse import urlparse
 
 import requests
 
-API_BASE = "https://api.caselaw.nationalarchives.gov.uk"
 SITE_BASE = "https://caselaw.nationalarchives.gov.uk"
 
 _NS = {
@@ -31,7 +31,6 @@ class CaseSummary:
     html_url: str
     xml_url: str
     pdf_url: str
-    links: dict[str, str] = field(default_factory=dict)
 
 
 def _parse_entry(entry: ET.Element) -> CaseSummary:
@@ -43,33 +42,28 @@ def _parse_entry(entry: ET.Element) -> CaseSummary:
     published = txt("atom:published")
     updated = txt("atom:updated")
 
-    uri_el = entry.find("tna:uri", _NS)
-    uri = uri_el.text.strip() if uri_el is not None and uri_el.text else ""
+    neutral_citation = ""
+    for id_el in entry.findall("tna:identifier", _NS):
+        if id_el.get("type") == "ukncn" and id_el.text:
+            neutral_citation = id_el.text.strip()
+            break
 
-    neutral_el = entry.find(
-        "tna:identifier[@type='ukncn']", {"tna": _NS["tna"]}
-    )
-    neutral_citation = (
-        neutral_el.text.strip()
-        if neutral_el is not None and neutral_el.text
-        else ""
-    )
-
-    links: dict[str, str] = {}
+    html_url = ""
+    xml_url = ""
+    pdf_url = ""
     for link in entry.findall("atom:link", _NS):
-        rel = link.get("rel", "alternate")
         href = link.get("href", "")
         mime = link.get("type", "")
-        if href:
-            links[rel] = href
-            if "pdf" in mime:
-                links["pdf"] = href
-            elif "xml" in mime:
-                links["xml"] = href
+        if not href:
+            continue
+        if "pdf" in mime:
+            pdf_url = href
+        elif "xml" in mime:
+            xml_url = href
+        elif not mime and link.get("rel") == "alternate":
+            html_url = href
 
-    html_url = links.get("alternate", f"{SITE_BASE}/{uri}" if uri else "")
-    xml_url = links.get("xml", f"{SITE_BASE}/{uri}/data.xml" if uri else "")
-    pdf_url = links.get("pdf", f"{SITE_BASE}/{uri}/data.pdf" if uri else "")
+    uri = urlparse(html_url).path.lstrip("/") if html_url else ""
 
     return CaseSummary(
         title=title,
@@ -80,7 +74,6 @@ def _parse_entry(entry: ET.Element) -> CaseSummary:
         html_url=html_url,
         xml_url=xml_url,
         pdf_url=pdf_url,
-        links=links,
     )
 
 
@@ -113,7 +106,7 @@ class CaselawClient:
             "per_page": per_page,
             "order": "-date",
         }
-        resp = self._get(f"{API_BASE}/atom.xml", **params)
+        resp = self._get(f"{SITE_BASE}/atom.xml", **params)
         return ET.fromstring(resp.content)
 
     def total_results(self) -> int:

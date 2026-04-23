@@ -84,9 +84,7 @@ class TestParseEntry:
         assert case.pdf_url.endswith("data.pdf")
 
     def test_missing_fields_return_empty_strings(self):
-        bare = ET.fromstring(
-            f'<entry xmlns="{ATOM_NS}" xmlns:tna="{TNA_NS}"></entry>'
-        )
+        bare = ET.fromstring(f'<entry xmlns="{ATOM_NS}" xmlns:tna="{TNA_NS}"></entry>')
         case = _parse_entry(bare)
         assert case.title == ""
         assert case.uri == ""
@@ -177,5 +175,6 @@ class TestCaselawClient:
         client = CaselawClient(courts=["ukut/tcc", "ukftt/tc"], session=session, delay=0)
         list(client.iter_cases())
         call_kwargs = session.get.call_args
-        assert "court" in call_kwargs.kwargs.get("params", call_kwargs[1].get("params", {})) or \
-               any("court" in str(a) for a in call_kwargs.args)
+        assert "court" in call_kwargs.kwargs.get(
+            "params", call_kwargs[1].get("params", {})
+        ) or any("court" in str(a) for a in call_kwargs.args)
