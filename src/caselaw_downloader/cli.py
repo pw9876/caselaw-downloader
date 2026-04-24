@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import date
 from pathlib import Path
 
 import click
@@ -55,7 +56,27 @@ VALID_FORMATS = {"html", "xml", "pdf"}
     default=False,
     help="Print the total number of matching cases and exit.",
 )
-def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: int | None, count: bool) -> None:
+@click.option(
+    "--date-from",
+    default=None,
+    metavar="YYYY-MM-DD",
+    help="Only include cases published on or after this date.",
+)
+@click.option(
+    "--date-to",
+    default=None,
+    metavar="YYYY-MM-DD",
+    help="Only include cases published on or before this date.",
+)
+def main(
+    output: str,
+    formats: tuple[str, ...],
+    courts: tuple[str, ...],
+    limit: int | None,
+    count: bool,
+    date_from: str | None,
+    date_to: str | None,
+) -> None:
     """Download case law from The National Archives Find Case Law service.
 
     By default downloads all Tax Chamber and Upper Tribunal Tax and Chancery
@@ -66,12 +87,30 @@ def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: 
       caselaw-downloader --format xml --format pdf --limit 10
       caselaw-downloader --court ukftt/tc --output ./tax-cases
       caselaw-downloader --count
+      caselaw-downloader --date-from 2024-01-01 --date-to 2024-12-31 --count
     """
-    client = CaselawClient(courts=list(courts))
+    for label, val in (("--date-from", date_from), ("--date-to", date_to)):
+        if val is not None:
+            try:
+                date.fromisoformat(val)
+            except ValueError:
+                raise click.BadParameter(f"must be YYYY-MM-DD, got {val!r}", param_hint=label)
+
+    if date_from and date_to and date.fromisoformat(date_from) > date.fromisoformat(date_to):
+        raise click.UsageError(
+            f"--date-from ({date_from}) must not be after --date-to ({date_to})"
+        )
+
+    client = CaselawClient(courts=list(courts), date_from=date_from, date_to=date_to)
 
     if count:
         total = client.total_results()
-        click.echo(f"{total} cases found for courts: {', '.join(courts)}")
+        parts = [f"courts: {', '.join(courts)}"]
+        if date_from:
+            parts.append(f"from {date_from}")
+        if date_to:
+            parts.append(f"to {date_to}")
+        click.echo(f"{total} cases found for {', '.join(parts)}")
         return
 
     fmt_set = {f.lower() for f in formats}
@@ -80,6 +119,10 @@ def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: 
     click.echo(f"Courts : {', '.join(courts)}")
     click.echo(f"Formats: {', '.join(sorted(fmt_set))}")
     click.echo(f"Output : {output_path.resolve()}")
+    if date_from:
+        click.echo(f"From   : {date_from}")
+    if date_to:
+        click.echo(f"To     : {date_to}")
     if limit:
         click.echo(f"Limit  : {limit}")
     click.echo()
@@ -105,4 +148,5 @@ def main(output: str, formats: tuple[str, ...], courts: tuple[str, ...], limit: 
         sys.exit(1)
 
     click.echo()
-    click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {output_path.resolve()}")
+    dest = output_path.resolve()
+    click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {dest}")

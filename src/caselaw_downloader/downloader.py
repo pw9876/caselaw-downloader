@@ -24,7 +24,7 @@ def download_case(
     formats: set[Format],
 ) -> list[Path]:
     """Download requested formats for a single case. Returns paths written."""
-    base = output_dir / _safe_path(case.uri)
+    base = output_dir / _safe_path(case.slug or case.uri)
     base.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
