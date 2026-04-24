@@ -21,6 +21,7 @@ dev = [
     "ggshield",
     "pyyaml>=6.0.0",
     "pip-audit",
+    "anthropic>=0.40.0",
 ]
 
 [project.scripts]

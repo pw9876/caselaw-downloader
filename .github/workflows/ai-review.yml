@@ -1,0 +1,72 @@
+name: AI Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review (leave blank for full codebase review)"
+        required: false
+
+jobs:
+  tester-review:
+    name: AI Tester Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install anthropic
+        run: pip install anthropic
+
+      - name: Run tester review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          MANUAL_PR="${{ inputs.pr_number }}"
+          TARGET="${PR:-$MANUAL_PR}"
+          if [ -n "$TARGET" ]; then
+            python scripts/ai_review.py --role tester --pr "$TARGET" --post
+          else
+            python scripts/ai_review.py --role tester
+          fi
+
+  product-owner-review:
+    name: AI Product Owner Review
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install anthropic
+        run: pip install anthropic
+
+      - name: Run product owner review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          MANUAL_PR="${{ inputs.pr_number }}"
+          TARGET="${PR:-$MANUAL_PR}"
+          if [ -n "$TARGET" ]; then
+            python scripts/ai_review.py --role product-owner --pr "$TARGET" --post
+          else
+            python scripts/ai_review.py --role product-owner
+          fi
