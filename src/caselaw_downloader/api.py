@@ -120,9 +120,15 @@ class CaselawClient:
     def _date_params(self) -> dict[str, str]:
         p: dict[str, str] = {}
         if self.date_from:
-            p["date_from"] = self.date_from
+            year, month, day = self.date_from.split("-")
+            p["from_date_0"] = day
+            p["from_date_1"] = month
+            p["from_date_2"] = year
         if self.date_to:
-            p["date_to"] = self.date_to
+            year, month, day = self.date_to.split("-")
+            p["to_date_0"] = day
+            p["to_date_1"] = month
+            p["to_date_2"] = year
         return p
 
     def _fetch_page(self, page: int, per_page: int = 50) -> ET.Element:

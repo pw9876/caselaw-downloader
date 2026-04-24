@@ -136,26 +136,31 @@ class TestCaselawClient:
     def test_date_params_sent_to_atom_feed(self):
         session = MagicMock()
         session.get.return_value = _mock_response(_EMPTY_FEED_XML)
-        list(self._client(session, date_from="2024-01-01", date_to="2024-12-31").iter_cases())
+        list(self._client(session, date_from="2024-01-15", date_to="2024-12-31").iter_cases())
         params = session.get.call_args[1]["params"]
-        assert params["date_from"] == "2024-01-01"
-        assert params["date_to"] == "2024-12-31"
+        assert params["from_date_0"] == "15"
+        assert params["from_date_1"] == "01"
+        assert params["from_date_2"] == "2024"
+        assert params["to_date_0"] == "31"
+        assert params["to_date_1"] == "12"
+        assert params["to_date_2"] == "2024"
 
     def test_date_params_sent_to_search(self):
         session = MagicMock()
         session.get.return_value = _mock_response(_SEARCH_HTML_WITH_COUNT)
-        self._client(session, date_from="2024-01-01", date_to="2024-06-30").total_results()
+        self._client(session, date_from="2024-06-01", date_to="2024-06-30").total_results()
         params = session.get.call_args[1]["params"]
-        assert params["date_from"] == "2024-01-01"
-        assert params["date_to"] == "2024-06-30"
+        assert params["from_date_0"] == "01"
+        assert params["from_date_1"] == "06"
+        assert params["from_date_2"] == "2024"
 
     def test_no_date_params_when_not_set(self):
         session = MagicMock()
         session.get.return_value = _mock_response(_EMPTY_FEED_XML)
         list(self._client(session).iter_cases())
         params = session.get.call_args[1]["params"]
-        assert "date_from" not in params
-        assert "date_to" not in params
+        assert "from_date_0" not in params
+        assert "to_date_0" not in params
 
     def test_iter_cases_yields_entries(self):
         session = MagicMock()
