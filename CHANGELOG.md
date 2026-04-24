@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/pw9876/caselaw-downloader/compare/v1.1.0...v1.2.0) (2026-04-24)
+
+
+### Features
+
+* default pdf format, zero-results warning, manifest and error log ([a5db317](https://github.com/pw9876/caselaw-downloader/commit/a5db3177bff5b6e97ea4ba953ca9419d4d25454a))
+
 # [1.1.0](https://github.com/pw9876/caselaw-downloader/compare/v1.0.1...v1.1.0) (2026-04-24)
 
 
