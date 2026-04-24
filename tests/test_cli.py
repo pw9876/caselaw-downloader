@@ -11,16 +11,17 @@ from caselaw_downloader.api import CaseSummary
 from caselaw_downloader.cli import main
 
 
-def _make_case(uri: str = "ukftt/tc/2024/1") -> CaseSummary:
+def _make_case(slug: str = "ukftt/tc/2024/1") -> CaseSummary:
     return CaseSummary(
         title="Test v HMRC",
-        uri=uri,
+        uri=f"d-uuid-{slug.replace('/', '-')}",
+        slug=slug,
         neutral_citation="[2024] UKFTT 1 (TC)",
         published="2024-03-01T00:00:00Z",
         updated="2024-03-01T00:00:00Z",
-        html_url=f"https://example.com/{uri}",
-        xml_url=f"https://example.com/{uri}/data.xml",
-        pdf_url=f"https://example.com/{uri}/data.pdf",
+        html_url=f"https://example.com/{slug}",
+        xml_url=f"https://example.com/{slug}/data.xml",
+        pdf_url=f"https://assets.example.com/uuid.pdf",
     )
 
 
@@ -42,7 +43,7 @@ class TestCLI:
 
     def test_download_success(self, tmp_path):
         runner = CliRunner()
-        with patch("caselaw_downloader.cli.CaselawClient") as MockClient, \
+        with patch("caselaw_downloader.cli.CaselawClient"), \
              patch("caselaw_downloader.cli.download_all") as mock_dl:
             mock_dl.return_value = [tmp_path / "case.xml"]
             result = runner.invoke(main, ["--output", str(tmp_path), "--limit", "1"])
@@ -68,8 +69,7 @@ class TestCLI:
         with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
             MockClient.return_value.total_results.return_value = 0
             runner.invoke(main, ["--count"])
-            call_kwargs = MockClient.call_args
-            courts = call_kwargs.kwargs.get("courts") or call_kwargs[1].get("courts")
+            courts = MockClient.call_args.kwargs["courts"]
         assert "ukut/tcc" in courts
         assert "ukftt/tc" in courts
 
@@ -81,3 +81,32 @@ class TestCLI:
             runner.invoke(main, ["--output", str(tmp_path), "--format", "pdf"])
             _, kwargs = mock_dl.call_args
         assert "pdf" in kwargs.get("formats", set())
+
+    def test_date_range_passed_to_client(self):
+        runner = CliRunner()
+        with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
+            MockClient.return_value.total_results.return_value = 5
+            runner.invoke(main, ["--count", "--date-from", "2024-01-01", "--date-to", "2024-12-31"])
+            kwargs = MockClient.call_args.kwargs
+        assert kwargs["date_from"] == "2024-01-01"
+        assert kwargs["date_to"] == "2024-12-31"
+
+    def test_count_output_includes_date_range(self):
+        runner = CliRunner()
+        with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
+            MockClient.return_value.total_results.return_value = 7
+            result = runner.invoke(main, ["--count", "--date-from", "2024-01-01", "--date-to", "2024-06-30"])
+        assert "2024-01-01" in result.output
+        assert "2024-06-30" in result.output
+
+    def test_inverted_date_range_rejected(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["--count", "--date-from", "2026-01-01", "--date-to", "2024-12-31"])
+        assert result.exit_code == 2
+        assert "--date-from" in result.output
+
+    def test_invalid_date_format_rejected(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["--count", "--date-from", "01-01-2024"])
+        assert result.exit_code == 2
+        assert "YYYY-MM-DD" in result.output

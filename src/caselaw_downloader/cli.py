@@ -96,6 +96,9 @@ def main(
             except ValueError:
                 raise click.BadParameter(f"must be YYYY-MM-DD, got {val!r}", param_hint=label)
 
+    if date_from and date_to and date.fromisoformat(date_from) > date.fromisoformat(date_to):
+        raise click.UsageError(f"--date-from ({date_from}) must not be after --date-to ({date_to})")
+
     client = CaselawClient(courts=list(courts), date_from=date_from, date_to=date_to)
 
     if count:
