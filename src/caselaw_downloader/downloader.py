@@ -25,6 +25,7 @@ def download_case(
     case: CaseSummary,
     output_dir: Path,
     formats: set[Format],
+    _errors: list[tuple[str, str]] | None = None,
 ) -> list[Path]:
     """Download requested formats for a single case. Returns paths written."""
     base = output_dir / _safe_path(case.slug or case.uri)
@@ -49,6 +50,8 @@ def download_case(
             data = client.fetch_bytes(url)
         except requests.HTTPError as e:
             print(f"Warning: skipping {url} ({e})", file=sys.stderr)
+            if _errors is not None:
+                _errors.append((url, str(e)))
             continue
         dest.write_bytes(data)
         written.append(dest)
@@ -70,7 +73,7 @@ def download_all(
         output_dir: Root directory for downloaded files.
         formats: Which formats to download ("html", "xml", "pdf").
         limit: Cap the number of cases downloaded (None = no cap).
-        progress_cb: Optional callable(case, paths) invoked after each case.
+        progress_cb: Optional callable(case, paths, errors) invoked after each case.
 
     Returns:
         All file paths written.
@@ -82,10 +85,11 @@ def download_all(
     for case in client.iter_cases():
         if limit is not None and count >= limit:
             break
-        paths = download_case(client, case, output_dir, formats)
+        case_errors: list[tuple[str, str]] = []
+        paths = download_case(client, case, output_dir, formats, _errors=case_errors)
         all_paths.extend(paths)
         count += 1
         if progress_cb:
-            progress_cb(case, paths)
+            progress_cb(case, paths, case_errors)
 
     return all_paths

@@ -46,7 +46,7 @@ class TestCLI:
             patch("caselaw_downloader.cli.CaselawClient"),
             patch("caselaw_downloader.cli.download_all") as mock_dl,
         ):
-            mock_dl.return_value = [tmp_path / "case.xml"]
+            mock_dl.return_value = [tmp_path / "case.pdf"]
             result = runner.invoke(main, ["--output", str(tmp_path), "--limit", "1"])
         assert result.exit_code == 0
 
@@ -56,7 +56,7 @@ class TestCLI:
             patch("caselaw_downloader.cli.CaselawClient"),
             patch("caselaw_downloader.cli.download_all") as mock_dl,
         ):
-            mock_dl.return_value = [tmp_path / "a.xml", tmp_path / "b.xml"]
+            mock_dl.return_value = [tmp_path / "a.pdf", tmp_path / "b.pdf"]
             result = runner.invoke(main, ["--output", str(tmp_path)])
         assert "Done" in result.output
 
@@ -78,6 +78,17 @@ class TestCLI:
         assert "ukut/tcc" in courts
         assert "ukftt/tc" in courts
 
+    def test_default_format_is_pdf(self, tmp_path):
+        runner = CliRunner()
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
+            mock_dl.return_value = []
+            runner.invoke(main, ["--output", str(tmp_path)])
+            _, kwargs = mock_dl.call_args
+        assert kwargs.get("formats") == {"pdf"}
+
     def test_format_option(self, tmp_path):
         runner = CliRunner()
         with (
@@ -85,9 +96,78 @@ class TestCLI:
             patch("caselaw_downloader.cli.download_all") as mock_dl,
         ):
             mock_dl.return_value = []
-            runner.invoke(main, ["--output", str(tmp_path), "--format", "pdf"])
+            runner.invoke(main, ["--output", str(tmp_path), "--format", "xml"])
             _, kwargs = mock_dl.call_args
-        assert "pdf" in kwargs.get("formats", set())
+        assert "xml" in kwargs.get("formats", set())
+
+    def test_zero_download_warns(self, tmp_path):
+        runner = CliRunner(mix_stderr=False)
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", return_value=[]),
+        ):
+            result = runner.invoke(main, ["--output", str(tmp_path)])
+        assert "Warning" in result.stderr
+        assert "court" in result.stderr.lower()
+
+    def test_count_zero_warns(self):
+        runner = CliRunner(mix_stderr=False)
+        with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
+            MockClient.return_value.total_results.return_value = 0
+            result = runner.invoke(main, ["--count", "--court", "ukftt/bad"])
+        assert "Warning" in result.stderr
+        assert "ukftt/bad" in result.stderr
+
+    def test_manifest_written(self, tmp_path):
+        runner = CliRunner()
+        case = _make_case()
+        pdf_path = tmp_path / "ukftt" / "tc" / "2024" / "1" / "case.pdf"
+
+        def fake_download(**kwargs):
+            kwargs["progress_cb"](case, [pdf_path], [])
+            return [pdf_path]
+
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", side_effect=fake_download),
+        ):
+            runner.invoke(main, ["--output", str(tmp_path)])
+
+        manifest = tmp_path / "manifest.csv"
+        assert manifest.exists()
+        content = manifest.read_text()
+        assert "[2024] UKFTT 1 (TC)" in content
+        assert "Test v HMRC" in content
+        assert "ukftt/tc/2024/1" in content
+
+    def test_manifest_not_written_for_zero_cases(self, tmp_path):
+        runner = CliRunner()
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", return_value=[]),
+        ):
+            runner.invoke(main, ["--output", str(tmp_path)])
+        assert not (tmp_path / "manifest.csv").exists()
+
+    def test_error_log_written(self, tmp_path):
+        runner = CliRunner(mix_stderr=False)
+        case = _make_case()
+
+        def fake_download(**kwargs):
+            kwargs["progress_cb"](case, [], [("https://example.com/f.pdf", "403 Forbidden")])
+            return []
+
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", side_effect=fake_download),
+        ):
+            result = runner.invoke(main, ["--output", str(tmp_path)])
+
+        errors_log = tmp_path / "errors.log"
+        assert errors_log.exists()
+        assert "https://example.com/f.pdf" in errors_log.read_text()
+        assert "Warning" in result.stderr
+        assert "errors.log" in result.stderr
 
     def test_date_range_passed_to_client(self):
         runner = CliRunner()
