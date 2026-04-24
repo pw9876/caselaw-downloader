@@ -103,6 +103,15 @@ class TestDownloadCase:
         assert paths == []
         assert "Warning" in capsys.readouterr().err
 
+    def test_http_error_recorded_in_errors_list(self, tmp_path):
+        client = _make_client([], content=b"data")
+        client.fetch_bytes.side_effect = requests.HTTPError("403 Forbidden")
+        case = _make_case()
+        errors: list[tuple[str, str]] = []
+        download_case(client, case, tmp_path, {"pdf"}, _errors=errors)
+        assert len(errors) == 1
+        assert "403" in errors[0][1]
+
     def test_existing_file_not_refetched(self, tmp_path):
         client = _make_client([], content=b"new data")
         case = _make_case()
@@ -159,9 +168,18 @@ class TestDownloadAll:
         cases = [_make_case("ukftt/tc/2024/1")]
         client = _make_client(cases, content=b"data")
         calls = []
-        download_all(client, tmp_path, {"xml"}, progress_cb=lambda c, p: calls.append((c, p)))
+        download_all(client, tmp_path, {"xml"}, progress_cb=lambda c, p, e: calls.append((c, p)))
         assert len(calls) == 1
         assert calls[0][0].slug == "ukftt/tc/2024/1"
+
+    def test_http_error_passed_to_callback(self, tmp_path):
+        cases = [_make_case("ukftt/tc/2024/1")]
+        client = _make_client(cases, content=b"data")
+        client.fetch_bytes.side_effect = requests.HTTPError("403 Forbidden")
+        collected: list = []
+        download_all(client, tmp_path, {"pdf"}, progress_cb=lambda c, p, e: collected.extend(e))
+        assert len(collected) == 1
+        assert "403" in collected[0][1]
 
     def test_empty_results_returns_empty_list(self, tmp_path):
         client = _make_client([], content=b"data")
