@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/pw9876/caselaw-downloader/compare/v1.0.0...v1.0.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* skip files that return HTTP errors instead of crashing ([0749781](https://github.com/pw9876/caselaw-downloader/commit/0749781df79df6702e5e919e8aceff88e83f3eca))
+
 # 1.0.0 (2026-04-24)
 
 
