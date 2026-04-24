@@ -19,7 +19,7 @@ def _make_case(slug: str = "ukftt/tc/2024/1") -> CaseSummary:
         updated="2024-03-01T00:00:00Z",
         html_url=f"https://caselaw.nationalarchives.gov.uk/{slug}",
         xml_url=f"https://caselaw.nationalarchives.gov.uk/{slug}/data.xml",
-        pdf_url=f"https://assets.caselaw.nationalarchives.gov.uk/uuid/uuid.pdf",
+        pdf_url="https://assets.caselaw.nationalarchives.gov.uk/uuid/uuid.pdf",
     )
 
 

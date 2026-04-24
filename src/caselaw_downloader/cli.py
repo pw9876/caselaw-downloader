@@ -97,7 +97,9 @@ def main(
                 raise click.BadParameter(f"must be YYYY-MM-DD, got {val!r}", param_hint=label)
 
     if date_from and date_to and date.fromisoformat(date_from) > date.fromisoformat(date_to):
-        raise click.UsageError(f"--date-from ({date_from}) must not be after --date-to ({date_to})")
+        raise click.UsageError(
+            f"--date-from ({date_from}) must not be after --date-to ({date_to})"
+        )
 
     client = CaselawClient(courts=list(courts), date_from=date_from, date_to=date_to)
 
@@ -146,4 +148,5 @@ def main(
         sys.exit(1)
 
     click.echo()
-    click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {output_path.resolve()}")
+    dest = output_path.resolve()
+    click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {dest}")

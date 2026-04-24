@@ -27,8 +27,10 @@ _SINGLE_ENTRY_XML = f"""<?xml version="1.0" encoding="UTF-8"?>
     <tna:uri>d-9aa2342e-0f33-4a94-9597-3eed9f72b50f</tna:uri>
     <tna:identifier slug="ukftt/tc/2024/1" type="ukncn">[2024] UKFTT 1 (TC)</tna:identifier>
     <link rel="alternate" href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1"/>
-    <link rel="alternate" type="application/akn+xml" href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1/data.xml"/>
-    <link rel="alternate" type="application/pdf" href="https://assets.caselaw.nationalarchives.gov.uk/d-9aa2342e/d-9aa2342e.pdf"/>
+    <link rel="alternate" type="application/akn+xml"
+      href="https://caselaw.nationalarchives.gov.uk/ukftt/tc/2024/1/data.xml"/>
+    <link rel="alternate" type="application/pdf"
+      href="https://assets.caselaw.nationalarchives.gov.uk/d-9aa2342e/d-9aa2342e.pdf"/>
   </entry>
 </feed>"""
 
@@ -180,7 +182,7 @@ class TestCaselawClient:
     def test_iter_cases_paginates(self):
         two_entries = _SINGLE_ENTRY_XML.replace(
             "</feed>",
-            f"""  <entry>
+            """  <entry>
     <title>Jones v HMRC</title>
     <published>2024-04-01T00:00:00Z</published>
     <updated>2024-04-01T00:00:00Z</updated>

@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -21,7 +20,7 @@ def _make_case(slug: str = "ukftt/tc/2024/1") -> CaseSummary:
         updated="2024-03-01T00:00:00Z",
         html_url=f"https://example.com/{slug}",
         xml_url=f"https://example.com/{slug}/data.xml",
-        pdf_url=f"https://assets.example.com/uuid.pdf",
+        pdf_url="https://assets.example.com/uuid.pdf",
     )
 
 
@@ -86,7 +85,8 @@ class TestCLI:
         runner = CliRunner()
         with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
             MockClient.return_value.total_results.return_value = 5
-            runner.invoke(main, ["--count", "--date-from", "2024-01-01", "--date-to", "2024-12-31"])
+            args = ["--count", "--date-from", "2024-01-01", "--date-to", "2024-12-31"]
+            runner.invoke(main, args)
             kwargs = MockClient.call_args.kwargs
         assert kwargs["date_from"] == "2024-01-01"
         assert kwargs["date_to"] == "2024-12-31"
@@ -95,13 +95,15 @@ class TestCLI:
         runner = CliRunner()
         with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
             MockClient.return_value.total_results.return_value = 7
-            result = runner.invoke(main, ["--count", "--date-from", "2024-01-01", "--date-to", "2024-06-30"])
+            args = ["--count", "--date-from", "2024-01-01", "--date-to", "2024-06-30"]
+            result = runner.invoke(main, args)
         assert "2024-01-01" in result.output
         assert "2024-06-30" in result.output
 
     def test_inverted_date_range_rejected(self):
         runner = CliRunner()
-        result = runner.invoke(main, ["--count", "--date-from", "2026-01-01", "--date-to", "2024-12-31"])
+        args = ["--count", "--date-from", "2026-01-01", "--date-to", "2024-12-31"]
+        result = runner.invoke(main, args)
         assert result.exit_code == 2
         assert "--date-from" in result.output
 
