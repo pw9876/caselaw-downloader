@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/pw9876/caselaw-downloader/compare/v1.0.1...v1.1.0) (2026-04-24)
+
+
+### Features
+
+* skip already-downloaded files to support resume ([d375795](https://github.com/pw9876/caselaw-downloader/commit/d37579562ddbc9027732ea83ebf880a55ea1b345))
+
 ## [1.0.1](https://github.com/pw9876/caselaw-downloader/compare/v1.0.0...v1.0.1) (2026-04-24)
 
 
