@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -9,22 +10,24 @@ from typing import Iterator
 
 import requests
 
-API_BASE = "https://api.caselaw.nationalarchives.gov.uk"
 SITE_BASE = "https://caselaw.nationalarchives.gov.uk"
 
 _NS = {
     "atom": "http://www.w3.org/2005/Atom",
-    "tna": "http://www.legislation.gov.uk/namespaces/TNA",
+    "tna": "https://caselaw.nationalarchives.gov.uk",
 }
 
 # Public rate limit: 1 000 requests per rolling 5-minute window
 _MIN_DELAY = 0.31  # ~194 req/min, safely under 200 req/min ceiling
 
+_COUNT_RE = re.compile(r"([\d,]+)\s+documents?\s+found", re.IGNORECASE)
+
 
 @dataclass
 class CaseSummary:
     title: str
-    uri: str  # e.g. "ukut/tcc/2024/1"
+    uri: str        # UUID e.g. "d-9aa2342e-0f33-4a94-9597-3eed9f72b50f"
+    slug: str       # path e.g. "ukftt/tc/2026/613"
     neutral_citation: str
     published: str
     updated: str
@@ -46,34 +49,42 @@ def _parse_entry(entry: ET.Element) -> CaseSummary:
     uri_el = entry.find("tna:uri", _NS)
     uri = uri_el.text.strip() if uri_el is not None and uri_el.text else ""
 
-    neutral_el = entry.find(
-        "tna:identifier[@type='ukncn']", {"tna": _NS["tna"]}
-    )
+    # tna:identifier with type="ukncn" carries both the citation text and the
+    # slug attribute (e.g. slug="ukftt/tc/2026/613")
+    ncn_el = entry.find(f"{{{_NS['tna']}}}identifier[@type='ukncn']")
     neutral_citation = (
-        neutral_el.text.strip()
-        if neutral_el is not None and neutral_el.text
-        else ""
+        ncn_el.text.strip() if ncn_el is not None and ncn_el.text else ""
     )
+    slug = ncn_el.get("slug", "") if ncn_el is not None else ""
 
+    # Multiple rel="alternate" links are distinguished by their type attribute
+    html_url = xml_url = pdf_url = ""
     links: dict[str, str] = {}
     for link in entry.findall("atom:link", _NS):
-        rel = link.get("rel", "alternate")
+        rel = link.get("rel", "")
         href = link.get("href", "")
         mime = link.get("type", "")
-        if href:
-            links[rel] = href
+        if not href:
+            continue
+        links[f"{rel}:{mime}"] = href
+        if rel == "alternate":
             if "pdf" in mime:
-                links["pdf"] = href
-            elif "xml" in mime:
-                links["xml"] = href
+                pdf_url = href
+            elif "xml" in mime or "akn" in mime:
+                xml_url = href
+            elif not mime:
+                html_url = href
 
-    html_url = links.get("alternate", f"{SITE_BASE}/{uri}" if uri else "")
-    xml_url = links.get("xml", f"{SITE_BASE}/{uri}/data.xml" if uri else "")
-    pdf_url = links.get("pdf", f"{SITE_BASE}/{uri}/data.pdf" if uri else "")
+    # Fallbacks using slug
+    if not html_url and slug:
+        html_url = f"{SITE_BASE}/{slug}"
+    if not xml_url and slug:
+        xml_url = f"{SITE_BASE}/{slug}/data.xml"
 
     return CaseSummary(
         title=title,
         uri=uri,
+        slug=slug,
         neutral_citation=neutral_citation,
         published=published,
         updated=updated,
@@ -113,14 +124,20 @@ class CaselawClient:
             "per_page": per_page,
             "order": "-date",
         }
-        resp = self._get(f"{API_BASE}/atom.xml", **params)
+        resp = self._get(f"{SITE_BASE}/atom.xml", **params)
         return ET.fromstring(resp.content)
 
     def total_results(self) -> int:
-        root = self._fetch_page(page=1, per_page=1)
-        total_el = root.find("{http://a9.com/-/spec/opensearch/1.1/}totalResults")
-        if total_el is not None and total_el.text:
-            return int(total_el.text)
+        """Return total matching cases by scraping the search page count."""
+        resp = self._get(
+            f"{SITE_BASE}/search",
+            court=self.courts,
+        )
+        m = _COUNT_RE.search(resp.text)
+        if m:
+            return int(m.group(1).replace(",", ""))
+        # Fall back: count entries on first page only (undercount, but safe)
+        root = self._fetch_page(page=1, per_page=50)
         return len(root.findall("atom:entry", _NS))
 
     def iter_cases(self, per_page: int = 50) -> Iterator[CaseSummary]:

@@ -11,16 +11,17 @@ from caselaw_downloader.api import CaseSummary
 from caselaw_downloader.downloader import _safe_path, download_all, download_case
 
 
-def _make_case(uri: str = "ukftt/tc/2024/1") -> CaseSummary:
+def _make_case(slug: str = "ukftt/tc/2024/1") -> CaseSummary:
     return CaseSummary(
         title="Smith v HMRC",
-        uri=uri,
+        uri=f"d-uuid-{slug.replace('/', '-')}",
+        slug=slug,
         neutral_citation="[2024] UKFTT 1 (TC)",
         published="2024-03-01T00:00:00Z",
         updated="2024-03-01T00:00:00Z",
-        html_url=f"https://caselaw.nationalarchives.gov.uk/{uri}",
-        xml_url=f"https://caselaw.nationalarchives.gov.uk/{uri}/data.xml",
-        pdf_url=f"https://caselaw.nationalarchives.gov.uk/{uri}/data.pdf",
+        html_url=f"https://caselaw.nationalarchives.gov.uk/{slug}",
+        xml_url=f"https://caselaw.nationalarchives.gov.uk/{slug}/data.xml",
+        pdf_url=f"https://assets.caselaw.nationalarchives.gov.uk/uuid/uuid.pdf",
     )
 
 
@@ -32,11 +33,11 @@ def _make_client(cases: list[CaseSummary], content: bytes = b"data") -> MagicMoc
 
 
 class TestSafePath:
-    def test_basic_uri(self):
+    def test_basic_slug(self):
         p = _safe_path("ukftt/tc/2024/1")
         assert str(p) == "ukftt/tc/2024/1"
 
-    def test_uri_with_special_chars(self):
+    def test_slug_with_special_chars(self):
         p = _safe_path("ukftt/tc/2024/foo bar")
         assert " " not in str(p)
 
@@ -75,7 +76,7 @@ class TestDownloadCase:
         assert "case.xml" in names
         assert "case.pdf" in names
 
-    def test_creates_subdirectory(self, tmp_path):
+    def test_creates_subdirectory_from_slug(self, tmp_path):
         client = _make_client([], content=b"data")
         case = _make_case("ukftt/tc/2024/99")
         download_case(client, case, tmp_path, {"xml"})
@@ -84,7 +85,7 @@ class TestDownloadCase:
     def test_empty_url_skipped(self, tmp_path):
         client = _make_client([], content=b"data")
         case = _make_case()
-        case.xml_url = ""
+        case.xml_url = ""  # noqa: SIM910 — direct mutation for test setup
         paths = download_case(client, case, tmp_path, {"xml"})
         assert paths == []
 
@@ -120,7 +121,7 @@ class TestDownloadAll:
         calls = []
         download_all(client, tmp_path, {"xml"}, progress_cb=lambda c, p: calls.append((c, p)))
         assert len(calls) == 1
-        assert calls[0][0].uri == "ukftt/tc/2024/1"
+        assert calls[0][0].slug == "ukftt/tc/2024/1"
 
     def test_empty_results_returns_empty_list(self, tmp_path):
         client = _make_client([], content=b"data")

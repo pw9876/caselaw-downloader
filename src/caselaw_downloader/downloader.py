@@ -12,9 +12,9 @@ Format = str  # "html" | "xml" | "pdf"
 _SAFE_RE = re.compile(r"[^\w\-/]")
 
 
-def _safe_path(uri: str) -> Path:
-    """Convert a case URI like 'ukut/tcc/2024/1' into a safe relative path."""
-    return Path(_SAFE_RE.sub("_", uri))
+def _safe_path(slug: str) -> Path:
+    """Convert a case slug like 'ukut/tcc/2024/1' into a safe relative path."""
+    return Path(_SAFE_RE.sub("_", slug))
 
 
 def download_case(
@@ -24,7 +24,7 @@ def download_case(
     formats: set[Format],
 ) -> list[Path]:
     """Download requested formats for a single case. Returns paths written."""
-    base = output_dir / _safe_path(case.uri)
+    base = output_dir / _safe_path(case.slug or case.uri)
     base.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
 
