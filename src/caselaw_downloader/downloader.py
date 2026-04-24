@@ -42,6 +42,9 @@ def download_case(
         if not url:
             continue
         dest = base / filename
+        if dest.exists():
+            written.append(dest)
+            continue
         try:
             data = client.fetch_bytes(url)
         except requests.HTTPError as e:

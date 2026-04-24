@@ -103,6 +103,38 @@ class TestDownloadCase:
         assert paths == []
         assert "Warning" in capsys.readouterr().err
 
+    def test_existing_file_not_refetched(self, tmp_path):
+        client = _make_client([], content=b"new data")
+        case = _make_case()
+        dest_dir = tmp_path / "ukftt" / "tc" / "2024" / "1"
+        dest_dir.mkdir(parents=True)
+        (dest_dir / "case.xml").write_bytes(b"original")
+        paths = download_case(client, case, tmp_path, {"xml"})
+        client.fetch_bytes.assert_not_called()
+        assert len(paths) == 1
+        assert paths[0].read_bytes() == b"original"
+
+    def test_existing_file_included_in_returned_paths(self, tmp_path):
+        client = _make_client([], content=b"new data")
+        case = _make_case()
+        dest_dir = tmp_path / "ukftt" / "tc" / "2024" / "1"
+        dest_dir.mkdir(parents=True)
+        existing = dest_dir / "case.xml"
+        existing.write_bytes(b"original")
+        paths = download_case(client, case, tmp_path, {"xml"})
+        assert paths == [existing]
+
+    def test_missing_format_fetched_when_other_exists(self, tmp_path):
+        client = _make_client([], content=b"pdf data")
+        case = _make_case()
+        dest_dir = tmp_path / "ukftt" / "tc" / "2024" / "1"
+        dest_dir.mkdir(parents=True)
+        (dest_dir / "case.xml").write_bytes(b"existing xml")
+        paths = download_case(client, case, tmp_path, {"xml", "pdf"})
+        client.fetch_bytes.assert_called_once_with(case.pdf_url)
+        names = {p.name for p in paths}
+        assert names == {"case.xml", "case.pdf"}
+
 
 class TestDownloadAll:
     def test_downloads_all_cases(self, tmp_path):
@@ -141,3 +173,14 @@ class TestDownloadAll:
         client = _make_client(cases, content=b"data")
         paths = download_all(client, tmp_path, {"xml"}, limit=None)
         assert len(paths) == 10
+
+    def test_resume_skips_already_downloaded(self, tmp_path):
+        cases = [_make_case("ukftt/tc/2024/1")]
+        client = _make_client(cases, content=b"new")
+        dest_dir = tmp_path / "ukftt" / "tc" / "2024" / "1"
+        dest_dir.mkdir(parents=True)
+        (dest_dir / "case.xml").write_bytes(b"original")
+        paths = download_all(client, tmp_path, {"xml"})
+        client.fetch_bytes.assert_not_called()
+        assert len(paths) == 1
+        assert paths[0].read_bytes() == b"original"
