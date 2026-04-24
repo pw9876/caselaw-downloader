@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
+
+import requests
 
 from caselaw_downloader.api import CaseSummary, CaselawClient
 
@@ -39,7 +42,11 @@ def download_case(
         if not url:
             continue
         dest = base / filename
-        data = client.fetch_bytes(url)
+        try:
+            data = client.fetch_bytes(url)
+        except requests.HTTPError as e:
+            print(f"Warning: skipping {url} ({e})", file=sys.stderr)
+            continue
         dest.write_bytes(data)
         written.append(dest)
 

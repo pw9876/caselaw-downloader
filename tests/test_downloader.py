@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import requests
+
 from caselaw_downloader.api import CaseSummary
 from caselaw_downloader.downloader import _safe_path, download_all, download_case
 
@@ -92,6 +94,14 @@ class TestDownloadCase:
         case = _make_case()
         download_case(client, case, tmp_path, {"xml"})
         client.fetch_bytes.assert_called_once_with(case.xml_url)
+
+    def test_http_error_skipped_with_warning(self, tmp_path, capsys):
+        client = _make_client([], content=b"data")
+        client.fetch_bytes.side_effect = requests.HTTPError("403 Forbidden")
+        case = _make_case()
+        paths = download_case(client, case, tmp_path, {"pdf"})
+        assert paths == []
+        assert "Warning" in capsys.readouterr().err
 
 
 class TestDownloadAll:
