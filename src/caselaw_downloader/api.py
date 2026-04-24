@@ -26,8 +26,8 @@ _COUNT_RE = re.compile(r"([\d,]+)\s+documents?\s+found", re.IGNORECASE)
 @dataclass
 class CaseSummary:
     title: str
-    uri: str        # UUID e.g. "d-9aa2342e-0f33-4a94-9597-3eed9f72b50f"
-    slug: str       # path e.g. "ukftt/tc/2026/613"
+    uri: str  # UUID e.g. "d-9aa2342e-0f33-4a94-9597-3eed9f72b50f"
+    slug: str  # path e.g. "ukftt/tc/2026/613"
     neutral_citation: str
     published: str
     updated: str
@@ -50,9 +50,7 @@ def _parse_entry(entry: ET.Element) -> CaseSummary:
     uri = uri_el.text.strip() if uri_el is not None and uri_el.text else ""
 
     ncn_el = entry.find(f"{{{_NS['tna']}}}identifier[@type='ukncn']")
-    neutral_citation = (
-        ncn_el.text.strip() if ncn_el is not None and ncn_el.text else ""
-    )
+    neutral_citation = ncn_el.text.strip() if ncn_el is not None and ncn_el.text else ""
     slug = ncn_el.get("slug", "") if ncn_el is not None else ""
 
     html_url = xml_url = pdf_url = ""
