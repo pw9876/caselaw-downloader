@@ -29,7 +29,7 @@ VALID_FORMATS = {"html", "xml", "pdf"}
     "-f",
     "formats",
     multiple=True,
-    default=["xml"],
+    default=["pdf"],
     show_default=True,
     type=click.Choice(["html", "xml", "pdf"], case_sensitive=False),
     help="File format(s) to download. Can be specified multiple times.",
@@ -111,6 +111,11 @@ def main(
         if date_to:
             parts.append(f"to {date_to}")
         click.echo(f"{total} cases found for {', '.join(parts)}")
+        if total == 0:
+            click.echo(
+                f"Warning: no cases found. Verify court code(s) are correct: {', '.join(courts)}",
+                err=True,
+            )
         return
 
     fmt_set = {f.lower() for f in formats}
@@ -150,3 +155,8 @@ def main(
     click.echo()
     dest = output_path.resolve()
     click.echo(f"Done. {downloaded} case(s), {len(all_paths)} file(s) saved to {dest}")
+    if downloaded == 0:
+        click.echo(
+            f"Warning: no cases downloaded. Verify court code(s) are correct: {', '.join(courts)}",
+            err=True,
+        )

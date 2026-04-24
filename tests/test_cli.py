@@ -78,6 +78,17 @@ class TestCLI:
         assert "ukut/tcc" in courts
         assert "ukftt/tc" in courts
 
+    def test_default_format_is_pdf(self, tmp_path):
+        runner = CliRunner()
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
+            mock_dl.return_value = []
+            runner.invoke(main, ["--output", str(tmp_path)])
+            _, kwargs = mock_dl.call_args
+        assert kwargs.get("formats") == {"pdf"}
+
     def test_format_option(self, tmp_path):
         runner = CliRunner()
         with (
@@ -85,9 +96,28 @@ class TestCLI:
             patch("caselaw_downloader.cli.download_all") as mock_dl,
         ):
             mock_dl.return_value = []
-            runner.invoke(main, ["--output", str(tmp_path), "--format", "pdf"])
+            runner.invoke(main, ["--output", str(tmp_path), "--format", "xml"])
             _, kwargs = mock_dl.call_args
-        assert "pdf" in kwargs.get("formats", set())
+        assert "xml" in kwargs.get("formats", set())
+
+    def test_zero_download_warns(self, tmp_path):
+        runner = CliRunner(mix_stderr=False)
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all") as mock_dl,
+        ):
+            mock_dl.return_value = []
+            result = runner.invoke(main, ["--output", str(tmp_path)])
+        assert "Warning" in result.stderr
+        assert "court" in result.stderr.lower()
+
+    def test_count_zero_warns(self):
+        runner = CliRunner(mix_stderr=False)
+        with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
+            MockClient.return_value.total_results.return_value = 0
+            result = runner.invoke(main, ["--count", "--court", "ukftt/bad"])
+        assert "Warning" in result.stderr
+        assert "ukftt/bad" in result.stderr
 
     def test_date_range_passed_to_client(self):
         runner = CliRunner()
