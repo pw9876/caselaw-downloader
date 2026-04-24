@@ -142,13 +142,15 @@ def main(
         downloaded += 1
         label = case.neutral_citation or case.uri or case.title
         click.echo(f"[{downloaded}] {label} — {len(paths)} file(s)")
-        manifest_rows.append({
-            "neutral_citation": case.neutral_citation,
-            "title": case.title,
-            "published": case.published[:10] if case.published else "",
-            "slug": case.slug,
-            "files": ";".join(str(p.relative_to(output_path)) for p in paths),
-        })
+        manifest_rows.append(
+            {
+                "neutral_citation": case.neutral_citation,
+                "title": case.title,
+                "published": case.published[:10] if case.published else "",
+                "slug": case.slug,
+                "files": ";".join(str(p.relative_to(output_path)) for p in paths),
+            }
+        )
         all_errors.extend(errors)
 
     try:
