@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import sys
 from datetime import date
 from pathlib import Path
@@ -133,12 +134,22 @@ def main(
     click.echo()
 
     downloaded = 0
+    manifest_rows: list[dict] = []
+    all_errors: list[tuple[str, str]] = []
 
-    def on_case(case, paths):
+    def on_case(case, paths, errors):
         nonlocal downloaded
         downloaded += 1
         label = case.neutral_citation or case.uri or case.title
         click.echo(f"[{downloaded}] {label} — {len(paths)} file(s)")
+        manifest_rows.append({
+            "neutral_citation": case.neutral_citation,
+            "title": case.title,
+            "published": case.published[:10] if case.published else "",
+            "slug": case.slug,
+            "files": ";".join(str(p.relative_to(output_path)) for p in paths),
+        })
+        all_errors.extend(errors)
 
     try:
         all_paths = download_all(
@@ -158,5 +169,23 @@ def main(
     if downloaded == 0:
         click.echo(
             f"Warning: no cases downloaded. Verify court code(s) are correct: {', '.join(courts)}",
+            err=True,
+        )
+
+    if manifest_rows:
+        manifest_path = output_path / "manifest.csv"
+        with manifest_path.open("w", newline="") as fh:
+            writer = csv.DictWriter(
+                fh, fieldnames=["neutral_citation", "title", "published", "slug", "files"]
+            )
+            writer.writeheader()
+            writer.writerows(manifest_rows)
+        click.echo(f"Manifest : {manifest_path.resolve()}")
+
+    if all_errors:
+        errors_path = output_path / "errors.log"
+        errors_path.write_text("".join(f"{u}\t{m}\n" for u, m in all_errors))
+        click.echo(
+            f"Warning: {len(all_errors)} file(s) skipped — see {errors_path.resolve()}",
             err=True,
         )

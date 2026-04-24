@@ -111,6 +111,57 @@ class TestCLI:
         assert "Warning" in result.stderr
         assert "court" in result.stderr.lower()
 
+    def test_manifest_written(self, tmp_path):
+        runner = CliRunner()
+        case = _make_case()
+        pdf_path = tmp_path / "ukftt" / "tc" / "2024" / "1" / "case.pdf"
+
+        def fake_download(**kwargs):
+            kwargs["progress_cb"](case, [pdf_path], [])
+            return [pdf_path]
+
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", side_effect=fake_download),
+        ):
+            runner.invoke(main, ["--output", str(tmp_path)])
+
+        manifest = tmp_path / "manifest.csv"
+        assert manifest.exists()
+        content = manifest.read_text()
+        assert "[2024] UKFTT 1 (TC)" in content
+        assert "Test v HMRC" in content
+        assert "ukftt/tc/2024/1" in content
+
+    def test_manifest_not_written_for_zero_cases(self, tmp_path):
+        runner = CliRunner()
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", return_value=[]),
+        ):
+            runner.invoke(main, ["--output", str(tmp_path)])
+        assert not (tmp_path / "manifest.csv").exists()
+
+    def test_error_log_written(self, tmp_path):
+        runner = CliRunner(mix_stderr=False)
+        case = _make_case()
+
+        def fake_download(**kwargs):
+            kwargs["progress_cb"](case, [], [("https://example.com/f.pdf", "403 Forbidden")])
+            return []
+
+        with (
+            patch("caselaw_downloader.cli.CaselawClient"),
+            patch("caselaw_downloader.cli.download_all", side_effect=fake_download),
+        ):
+            result = runner.invoke(main, ["--output", str(tmp_path)])
+
+        errors_log = tmp_path / "errors.log"
+        assert errors_log.exists()
+        assert "https://example.com/f.pdf" in errors_log.read_text()
+        assert "Warning" in result.stderr
+        assert "errors.log" in result.stderr
+
     def test_count_zero_warns(self):
         runner = CliRunner(mix_stderr=False)
         with patch("caselaw_downloader.cli.CaselawClient") as MockClient:
